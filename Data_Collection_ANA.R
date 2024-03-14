@@ -5,12 +5,15 @@ library(tidyverse)
 library(graphTweets)
 library(academictwitteR)
 
-#connection to twitter
+# connection to twitter
+
 set_bearer()
-bearer_token <- Sys.getenv("AAAAAAAAAAAAAAAAAAAAAPejlgEAAAAAVhCMeizJPJak1qlt1v7MT191baI%3DWBa49kT85hyFVi9g0a3WSgwoZccUsskE8CQFNID079HuW6sRVX")
+bearer_token <- Sys.getenv("bearer_token_here")
 headers <- c(`Authorization` = sprintf('Bearer %s', bearer_token))
 
-#Collect Tweets
+
+# Collect all tweets posted with hashtags "thinspo", "edtwt", and "proana" between 2019-11-01 and 2020-09-30
+
 Tweets <-
   get_all_tweets(
     query = c("#thinspo", "#edtw", "#proana"),
@@ -21,48 +24,71 @@ Tweets <-
     n = 1000000
   )
 
+
 #Transform tweets into dataframe
+
 Tweets_df <- bind_tweets(data_path = "Tweets/", output_format = "tidy")
+
+
 #filter tweets in English
+
 Tweets_df <- Tweets_df %>% 
   filter(lang == "en")
+
+
 #filter bot that tweets nonsensical pro-ed related tweets 
+
 Tweets_df <- Tweets_df %>% 
   filter(user_username != "Ana___Winter") 
-#RTs are cut off part way through the text, extract RTs put them into their own column and add to sourcetweet text, which has full text of Retweet,
-#if quoted, put text and quoted text together, if not keep original text
+
+
+# There are three kinds of tweets in the dataframe: retweets, orginal tweets and quote tweets. 
+# Retweets begin with the syntax RT:@username, which is the user that is being retweeted. This user is extracted and place in a new column "rt_username". 
+# The text column contains the text of the tweet, but retweets's text is cut off after a certain number of characters. The full text is in the sourcetweet text, but original tweets' sourcetweet text are NA. 
+# To have the full text of all the tweets, a new column full_text is created, using the what is in the text column for original tweets and what is in the sourcetweet text for retweets.
+
 Tweets_df <- Tweets_df %>%
-  mutate(rt_username =  str_extract(text, "RT @\\w+"),
-         rt_username = str_replace_all(rt_username, "RT @", ""),
-         full_text =  if_else(is.na(full_text), text, full_text))
-
-#make Poixct dates for better chronological indexing
-all_dates <- str_split_fixed(Tweets_df$created_at, "T", 2)
-Tweets_df$Date <- all_dates[,1]
-Tweets_df$Date <- as.POSIXct(Tweets_df$Date)
+  mutate(rt_username =  str_extract(text, "RT @\\w+"),          #extract RT:@username and move to new column
+         rt_username = str_replace_all(rt_username, "RT @", ""), #remove RT:@ before username
+         full_text =  if_else(is.na(sourcetext_text), text, sourcetweet_text))  #new column with full text of both retweets and original tweets
 
 
-#extract hashtags from full_text variable, regex expression accounts for hashtags 
-#followed by a space, another #, commas or periods or occurs at the end of the character string. 
-#create new hashtag variable, change to lowercase, remove # symbol
+
+# create column from "created_at" with yyyy/mm/dd format
+
+Ana_Tweets_df$Date <- as.Date(Ana_Tweets_df$created_at, format = "%Y-%m-%d")
+
+
+
+# extract hashtags from full_text variable 
+
 Tweets_df <- Tweets_df %>% 
-  mutate(hashtags = str_extract_all(full_text, "#(\\w+)(?=(?:\\s|,|\\.|$|#\\w))")) %>% 
+  mutate(hashtags = str_extract_all(full_text, "#(\\w+)(?=(?:\\s|,|\\.|$|#\\w))")) %>%  # regex accounts for hts followed by a space, another #, commas or periods or occurs at the end of the character string. 
   rowwise() %>% 
   mutate(hashtags = paste(hashtags, collapse = " ")) %>% 
-  mutate(hashtags =tolower(hashtags)) %>% 
-  hashtags = str_replace_all(hashtags, "#", "")
+  mutate(hashtags =tolower(hashtags)) %>%  # make lowercase
+  hashtags = str_replace_all(hashtags, "#", "") #remove "#" symbol
+
+
 
 ###### Co-Occurrence Network for Data Cleaning ########
 
-#edtwt picks up some education and tech tweets unrelated to proana
-#make hashtag co-occurrence network of entire periods for topics of hashtags
+# edtwt picks up some education and tech tweets unrelated to proana
+# make hashtag co-occurrence network of entire periods for topics of hashtags
+
 hashnet_all <- Tweets_df %>% separate_rows(hashtags, sep = " ")
 
+
 #create dataframe with tweet_id, username and hashtags
+
 edge_hash <- hashnet_all[,c("tweet_id", "user_username", "hashtags")]
 
+
 #create adjacency matrix that shows relationship between tweet_id and hashtags
+
 edgelist <- acast(edge_hash, formula = edge_hash$tweet_id ~ edge_hash$hashtags, length, value.var = "hashtags")
+
+
 #remove columns of hashtags with no connections
 edgelist <- edgelist[,apply(edgelist, MARGIN = 2, FUN = sum, na.rm = TRUE) > 1]
 #transpose and multiply edgelist by itself
