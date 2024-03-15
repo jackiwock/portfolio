@@ -1,18 +1,21 @@
 
-###### RETWEET NETWORK #######
+################################################ RETWEET NETWORK ###############################################
 
 # This code handles the first three sections in methods concerning RQ1: 
   # forming retweet network
   # fitting powerlaw lines to degree distributions
   # User Turnover 
 
-library(tidyverse)
-library(igraph)
-library(ggplot2)
-library(modelsummary) 
-library(poweRlaw)
-library(kableExtra)
-library(Hmisc) #spearman's correlation
+
+# Required Packages 
+
+library(tidyverse)     # data tranformation
+library(igraph)        # create retweet network
+library(ggplot2)       # visualization
+library(modelsummary)  # network statistics
+library(poweRlaw)      # fit powerlaw lines 
+
+
 
 
 # load data 
