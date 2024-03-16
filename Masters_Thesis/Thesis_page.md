@@ -1,7 +1,7 @@
 Influencers In Confinement
 ================
 
-| [Code](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis) | [Thesis Paper](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-199924) |
+| [Code](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis/Code) | [Thesis Paper](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-199924) |
 |-------------------------------------------------------------------------|-------------------------------------------------------------------------|
 
 # Abstract
