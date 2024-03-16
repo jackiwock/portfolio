@@ -1,10 +1,20 @@
 
 ################################################ RETWEET NETWORK ###############################################
 
-# This code handles the first three sections in methods concerning RQ1: 
-  # forming retweet network
-  # fitting powerlaw lines to degree distributions
-  # User Turnover 
+# This code handles the first three sections of my thesis's methods portion concerning RQ1: 
+
+#        How did the structure of Pro-Eating disorder retweet networks evolve as far as the
+#        shape of leadership and network structure before, during and after the first wave of
+#        Covid-19 lockdowns following March 2020?
+
+# This question is explored in the following parts 
+
+  # Part 1: Constructing a Retweet Network
+  # Part 2: Calculating Network Statistics
+  # Part 3: Adding month_joined variable and anonymize users
+  # Part 4: Fitting Powerlaw Lines to Degree Distributions
+  # Part 5: Visualizing Top Users' Degree Distributions
+  # Part 6: Calculating User Turnover 
 
 
 # Required Packages 
@@ -13,58 +23,70 @@ library(tidyverse)     # data tranformation
 library(igraph)        # create retweet network
 library(ggplot2)       # visualization
 library(modelsummary)  # network statistics
-library(poweRlaw)      # fit powerlaw lines 
+library(poweRlaw)      # fit powerlaw lines to the empirical data
 
 
+                ########################## Part 1: Constructing Retweet Networks #########################
 
+### Prepare data for monthly retweet networks
 
-# load data 
+# load data cleaned and processed data 
+
 load("final_ana.Rdata")
+
+
 # create variable that classes tweets by month
+
 final_ana <- final_ana %>% mutate(month = format(Date, "%Y-%m"))
 
-####### PREPARE DATA FOR RT NTW #########
 
-# Separate data into months
+# Separate data into monthly data frames
+
 months_df_list <- final_ana %>% as_tibble() %>% 
   group_split(month) 
 
+
 # make df with just retweets 
+
 month_RT_ntw_df <- lapply(months_df_list, function(x){
   x %>% filter(sourcetweet_type == "retweeted")
 })
 
-#drop self loops
-month_RT_ntw_df <- lapply(month_RT_ntw_df, function(x){
-  x %>% filter(user_username != rt_username)
-})
 
-######## MAKE RT NTW #########
-# Created edgelist
+### Make retweet netowork
+
+# Created edgelist with user name and retweeted username
+
 ALL_RT <- lapply(month_RT_ntw_df, function(x){
   x %>% 
     select(user_username, rt_username)
 })
-#make weighted
+
+# make weighted edgelist
+
 RT_edgelist <- lapply(ALL_RT, function(x){
   x %>% 
     group_by(user_username, rt_username) %>% 
     summarise(weight = sum(n()))
 })
 
-#create networks from edgelist
+# create networks from edgelist
+
 RT_ntws <- lapply(RT_edgelist, graph_from_data_frame)
 
-#remove self loops (just to be sure)
+
+# remove self loops and isolates
+
 RT_ntws <- lapply(RT_ntws, function(x){
   igraph::simplify(x, remove.loop = T)
-})
-# remove isolates 
-RT_ntws <- lapply(RT_ntws, function(x){
   x <- delete.vertices(x, which(degree(x) == 0))
 })
 
-########## CALCULATE NTW STATS FUNCTION ########
+
+                ######################## Part 2: Calculating Network Statistics #########################
+
+# create a function that calculates network statistics and puts then into a dataframe 
+
 calculate_network_stats <- function(network) {
   nodes <- vcount(network)
   ties <- ecount(network)
@@ -74,7 +96,6 @@ calculate_network_stats <- function(network) {
   clustering_coef <- transitivity(network, type = "average")
   ave_path_length <- mean_distance(network)
   
-  # Create a data frame with the calculated statistics
   stats_df <- data.frame(
     Nodes = nodes,
     Ties = ties,
@@ -89,32 +110,36 @@ calculate_network_stats <- function(network) {
 }
 
 
-##### CALCULATE NTW STATS MONTHLY #######
+# Calculate network statistics for each month
+
 network_stats <- lapply(RT_ntws, calculate_network_stats)
 
-##### CALCULATE NTW STATS OVERALL #######
-average_stats <- do.call(rbind,network_stats)
-#save(average_stats, file = "average_net_stats.Rdata")
-#summarize data
-Months <- c("2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08", "2020-09")
 
-Months_names <- c("November", "December", "January", "February", "March", "April", "May", "June", "July", "August", "September")
+                ############## Part 3: Add month_joined variable and anonymize users #################
 
-#Add month do each df 
+
 
 #convert networks in to dataframes
 RT_add_month_df <- lapply(RT_ntws, as_data_frame, what = "vertices")
 
-#add month variable
+
+# create a vector of months 
+
+Months <- c("2019-11", "2019-12", "2020-01", "2020-02", "2020-03", "2020-04", "2020-05", "2020-06", "2020-07", "2020-08", "2020-09")
+
+
+# add month variable to corresponding network 
 for(i in seq_along(RT_ntws)){
   RT_add_month_df[[i]] <- RT_add_month_df[[i]] %>% mutate(month = Months[i])
 }
 
-##### CREATE FULL RETWEET NETWORK DF ########
+# combine network data frames into one 
+
 RT_ntw_full <- do.call(rbind, RT_add_month_df)
 
-##### ADD MONTH JOINED ####### 
+
 #Add month_joined variable by grouping usernames and assigning variable based on first value that appears in df
+
 RT_ntw_full <- RT_ntw_full %>% 
   arrange(month) %>%  # Make sure the dataframe is sorted by date.
   group_by(name) %>% 
@@ -123,6 +148,7 @@ RT_ntw_full <- RT_ntw_full %>%
 
 
 # Add as a node attribute to the network
+
 for (i in seq_along(RT_ntws)) {
   # Extract the node names in the current monthly network
   network_nodes <- V(RT_ntws[[i]])$name
@@ -140,19 +166,25 @@ for (i in seq_along(RT_ntws)) {
   V(RT_ntws[[i]])$month_joined <- attributes_to_add
 }
 
-##### ANONYMIZE USER ID ##########
 
-#make a list of all users in networks
+# anonymize user id 
+
+# make a list of all users in networks
 unique_users <- unique(RT_ntw_full$name)
 
-#make a function that generates 4 random letters
+# make a function that generates 4 random letters for the number of unique users in the full network
+
 random_letters <- replicate(length(unique_users), paste(sample(letters, 4), collapse = ''))
 
-# Create a user_id column from combining month_joined with random letters
+
+# Create a column with user ids combining month_joined with random letters
+
 RT_ntw_full$user_id <- paste(RT_ntw_full$month_joined, random_letters[match(RT_ntw_full$name, unique_users)], sep = '-')
 # Rename the columns if needed
 
+
 #add as node attribute in similar way to month_joined
+
 for (i in seq_along(RT_ntws)) {
   #Extract the node names in the current monthly network
   network_nodes <- V(RT_ntws[[i]])$name
@@ -170,88 +202,107 @@ for (i in seq_along(RT_ntws)) {
   V(RT_ntws[[i]])$user_id <- node_id_to_add
 }
 
-###### DEGREE CENTALITY ########
+
+                ############## Part 4: Fitting Powerlaw Lines to Degree Distributions #################
+
+# Calculate in-degree centrality of each node in each network
+
 degrees <- lapply(RT_ntws, degree, mode = "in")
 for(i in seq_along(RT_ntws)){
   V(RT_ntws[[i]])$degree <- degrees[[i]]
 }
-####### MONTHLY RT NTW DATAFRAMES WITH ALL VARIABLES #########
+
+# Convert networks into dataframes with all node attributing including degree distributions
+
 RT_ntws_df <-  lapply(RT_ntws, as_data_frame, what = "vertices")
 
+### Fit Powelaw lines to degree distributions for each network
 
-degree_stats <- lapply(seq_along(RT_ntws_df), function(i) {
-  data.frame(
-    Month = Months_names[i],
-    Mean = mean(RT_ntws_df[[i]]$degree),
-    SD = sd(RT_ntws_df[[i]]$degree),
-    Min = min(RT_ntws_df[[i]]$degree),
-    Max = max(RT_ntws_df[[i]]$degree)
-  )
-})
-degree_stats <- do.call(rbind, degree_stats)
+# theories about patterns of leadership during covid were partially based on retweet
+# networks' tendency to be scale-free, which have a degree distribution that follows a power-law
+# distribution
 
-######## FITTING POWERLAW LINES ############
+# store results of analysis
 
 est_pl_RT <- list()
-pl_results_list <- list()
 pl_RT <- list()
+
 for (i in seq_along(RT_ntws_df)) {
-  # Create a power-law object for the degree distribution
+  
+  # Create a power-law object for the degree distribution for each network
   pl_RT[[i]] <- displ$new(RT_ntws_df[[i]]$degree)
   
-  # Estimate xmin
+  # Estimate xmin: most organically occurring networks only express power-law behavior
+  # after a certain value, this calculates that value along with the alpha scaling parameter
+  #that determines the rate of decrease of the power-law line and goodness-of-fit of the actual 
+  #network data to theoretical powerlaw distribution
+  
   est_pl_RT[[i]] <- estimate_xmin(pl_RT[[i]])
+  
+  #add to powerlaw object
   pl_RT[[i]]$setXmin(est_pl_RT[[i]])
   
-  # Add the power-law object to the results list
-  pl_results_list[[i]] <- pl_RT[[i]]
 }
 
 
-# make df for each month with results 
+# make a dataframe for each month with results 
+
 est_pl_RT_df <- Map(function(x, month) {
   data.frame(
     month = month,  # Use the corresponding month value
-    gof = x$gof,
-    xmin = x$xmin,
-    alpha = x$pars
+    gof = x$gof, # goodness of fit of each month's degree distribution to theoretical powerlaw distribution 
+    xmin = x$xmin,   # minimun x value where powerlaw behavior begins
+    alpha = x$pars  # alpha, the slope of the line
   )
 }, est_pl_RT, Months)
 
-#bind them all together 
+# bind them all together 
 est_pl_RT_full <- do.call(rbind, est_pl_RT_df)
 
+# visualiztion
 
 
-# plot in ggplot for better display 
-pl_plots_gg <- list()
-pl_lines <- list()
+pl_plots_gg <- list()   # store the lists of monthly plots 
+pl_lines <- list()      # store the powerlaw lines for each month to add to plots
+
+
 for (i in seq_along(pl_results_list)) {
   pl_plots_gg[[i]] <- plot(pl_results_list[[i]])
   pl_lines[[i]] <- lines(pl_results_list[[i]], col = 2)
 }
 
-###### PLOTS FOR TOP 20 and top 50 DEGREE USERS ##########
+                ############## Part 5: Visualizing Top Users' Degree Distributions #################
+
+# Create visualizations of top 20 and 50 users 
+
+# Store dataframes of top 20 and top 50 users and plots
+
 top_20_users <- list()
 top_50_users <- list()
 plots_deg <- list()
+
+# 
 for (i in seq_along(RT_ntws_df)) {
   # Convert name to factor with levels sorted in descending order of degree
   RT_ntws_df[[i]]$user_id <- fct_reorder(RT_ntws_df[[i]]$user_id, RT_ntws_df[[i]]$degree, .desc = TRUE)
   
-  #save top degree users
+  # save top degree users
+  
   top_20_users[[i]] <- RT_ntws_df[[i]] %>% 
     mutate(month_joined = as.factor(month_joined)) %>% 
     arrange(desc(degree)) %>% 
     slice_head(n = 20)
-  #save top 50 for TM
+  
+  #save top 50 
+  
   top_50_users[[i]] <- RT_ntws_df[[i]] %>% 
     mutate(moth_joined = as.factor(month_joined)) %>% 
     arrange(desc(degree)) %>% 
     slice_head(n = 50)
   
   #mark ppl who are present in the last month 
-  #create an empty vector to put results in 
+  #create an empty vector to put results in
+  
   top_20_users[[i]]$retained <- 0
   
   for (i in 1:length(top_20_users)) {
@@ -268,7 +319,7 @@ for (i in seq_along(RT_ntws_df)) {
       mutate(retained = ifelse(top_20_users[[i]]$name %in% top_20_users[[i - 1]]$name, "1", "0"))
   }
   
-  #plot 
+  # plot results 
   plots_deg[[i]] <- ggplot(top_20_users[[i]], aes(x = fct_rev(user_id), y = degree, fill = month_joined)) +
     geom_col() +
     coord_flip() +
@@ -286,14 +337,17 @@ for (i in seq_along(RT_ntws_df)) {
   }
 }
 
-############# TURNOVER AND NEW NODES FUNCTIONS. #######
-#### TURNOVER #####
+                ############## Part 6: Calculating User Turnover #################
+
 # function to calculate turnover
 calculate_turnover <- function(data_frames) {
   
   # empty vector to store turnover for each month
+  
   turnover_rates <- c()
+  
   #start at 2nd month in data
+  
   for (i in 2:length(data_frames)) {
     prev_month_df <- data_frames[[i - 1]]
     current_month_df <- data_frames[[i]]
@@ -312,37 +366,14 @@ calculate_turnover <- function(data_frames) {
 }
 
 #calculate overall turnover
+
 turnover_overall <- calculate_turnover(RT_ntws_df)
+
 #high turnover, relatively stable between 60 and 76%, except July, at 54%
 
 #calculate turnover in top 50 
 turnover_leaders <- calculate_turnover(RT_ntw_top_50)
 
-### CACULATE NEW NODES ####### 
-calculate_new <- function(x){
-  new_percents <- c()
-  for(i in 2:length(x)){
-    #number of members in current month
-    current_month_df <- x[[i]]
-    previous_month_df <- x[[i - 1]]
-    
-    new_nodes <- setdiff(current_month_df$name, previous_month_df$name)
-    new_percent <- length(new_nodes)/length(current_month_df$name)
-    new_percents <- c(new_percents, new_percent)
-  }
-  return(new_percents)
-}
 
-# new nodes overall
-new_overall <- calculate_new(RT_ntws_df)
-# new nodes in top 50
-new_50 <- calculate_new(RT_ntw_top_50)
-
-#Turnover/New Nodes DF
-turnover_df <- data.frame(month = month_no_NOV,
-                           turnover_all = turnover_overall,
-                           turnover_50 = turnover_leaders, 
-                           new_overall = new_overall,
-                           new_50 = new_50)
 
 
