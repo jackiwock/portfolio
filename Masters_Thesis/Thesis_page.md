@@ -1,10 +1,13 @@
-Influencers In Confinement
-================
+<div align="center">
+  <h1 style="text-align: center;">Influencers In Confinement</h1>
+</div>
+
+## Measuring Covid-19’s Impact on Leadership in Pro-Eating Disorder Twitter Communities
 
 | [Code](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis/Code) | [Thesis Paper](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-199924) |
 |-------------------------------------------------------------------------|-------------------------------------------------------------------------|
 
-# Abstract
+## Abstract
 
 The Covid-19 pandemic presented unprecedented challenges, with global
 lockdowns impacting individuals on a profound scale. Many took to social
