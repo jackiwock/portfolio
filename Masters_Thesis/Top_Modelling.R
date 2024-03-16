@@ -1,54 +1,76 @@
 
-##### TOPIC MODEL #######
-# this code describes the topic model used to adress RQ2
+################################################# TOPIC MODELLING #####################################################
 
-library(ggplot2)
+# this code describes the topic model used to address RQ2 in my masters thesis: 
+
+#        How did the content shared within pro-eating disorder retweet networks change
+#         before, during and after the first covid lockdown period?
+
+# # This question is explored in the following parts:
+
+# Part 1: Pre-processing Tweet Text 
+# Part 2: Creating a Corpus
+# Part 3: Creating a Document Term Matrix
+# Part 4: Determining Number of Topics
+# Part 5: Running the LDA Model
+# Part 6: Inspecting and Naming Topics
+# Part 7: Calculating and Visualizing Mean Topic Proportions
+# Part 8: Visualize Raw Tweet Counts
+
+
+# Required Packages 
+
+library(ggplot2)       # visualization
 library(data.table)
-library(slam)         #needed for perplexity calc
-library(quanteda)     #pre-process text and create corpus
-library(topicmodels)
-library(ldatuning) #calculate griffiths metric for number of topics
+library(slam)          # needed for perplexity calc
+library(quanteda)      # pre-process text and create corpus
+library(topicmodels)   # for topic modelling
+library(ldatuning)     # calculate griffiths metric for number of topics
 library(tidytext)
 library(cowplot)
-library(tidyverse)
-library(kableExtra)
+library(tidyverse)     # data manipulation
 library(gt)
 library(gridExtra)
 library(grid)
-library(janitor) #clean names
+library(janitor)       # clean names
 
 
-#load df with just retweets
-load("month_RT_tm.Rda")
+
+                  ######################## Part 1: Pre-processing the text ##########################
+
+# load tweets dataframe
+
+load("final_ana.Rda")
 
 
-##### PRE-PROCESSING CORPUS #######
+# filter for retweeted tweets
+
 Tweet_text_df <- month_RT_tm %>% filter(sourcetweet_type == "retweeted") %>%  
   select(sourcetweet_id, full_text, month) %>% distinct
-# I did a lot of the preprocessing manually to deal with twitter specific words, symbols and syntax
 
-# remove RT: infront of retweeted username
+
+# remove retweeted usernames that begin retweet text (RT:@username)
+
 Tweet_text_df$full_text <- gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", Tweet_text_df$full_text)
 
-#remove mentions
+
+#remove mentioned users (@username)
+
 Tweet_text_df$full_text = gsub("@\\w+", "", Tweet_text_df$full_text)
 
-#remove Hashtags
+
+#remove hashtags
+
 Tweet_text_df$full_text = gsub("#\\w+","", Tweet_text_df$full_text)
 
+
 #remove urls
+
 Tweet_text_df$full_text = gsub("http.+ |http.+$", " ", Tweet_text_df$full_text)
 
-#when processing in a previous test, its discovered that quanteda doesnt seem to handle contractions very well. 
-#Lematize doesn't appear to help it's something to with the apostrophe. 
-Tweet_text_df$full_text = gsub("don’t", "do not", Tweet_text_df$full_text)
-Tweet_text_df$full_text = gsub("can’t", "cannot", Tweet_text_df$full_text)
-Tweet_text_df$full_text = gsub("isn’t", "is not", Tweet_text_df$full_text)
-Tweet_text_df$full_text = gsub("it’s", "it is", Tweet_text_df$full_text)
-Tweet_text_df$full_text = gsub("you’re", "you are", Tweet_text_df$full_text) 
-Tweet_text_df$full_text = gsub("I’m", "I am", Tweet_text_df$full_text) 
 
 #other pre-processing
+
 Tweet_text_df$full_text = gsub("[[:punct:]]", " ", Tweet_text_df$full_text)  # Remove punctuation
 Tweet_text_df$full_text = gsub("[[ |\t]]{2,}", " ", Tweet_text_df$full_text)  # Remove tabs
 Tweet_text_df$full_text = gsub("\\b[a-z]\\b", "", Tweet_text_df$full_text) #remove single letters
@@ -59,46 +81,67 @@ Tweet_text_df$full_text = gsub("[[:digit:]]", "", Tweet_text_df$full_text) #numb
 Tweet_text_df$full_text = tolower(Tweet_text_df$full_text) #lowercase
 Tweet_text_df$full_text = gsub("\n", " ", Tweet_text_df$full_text) # remove \n for new line
 
-# previous run showed a tendency of users to repeat phrases multiple times that was biasing the data
+# previous run showed a tendency of users to repeat phrases multiple times much like a mantra 
+# (ie: "I will lose weight I will lose weight" that was biasing the data. This code reduces these repetitive
+# phrases down to one ("I will lose weight")
+
 Tweet_text_df$full_text = gsub("\\b(\\w+)\\b(?=.*\\b\\1\\b)", "", Tweet_text_df$full_text, perl = TRUE) 
 
+
 #remove duplicates 
+
 Tweet_text_df <- Tweet_text_df[!duplicated(Tweet_text_df$full_text),]
 
 
-##### MAKE CORPUS #####
+                  ######################## Part 2: Creating a Corpus ##############################
 
-#corpus with metadata
+# corpus with metadata
+
 RT_corpus <- corpus(x = Tweet_text_df,
                         text_field = "full_text",
                         meta = list( "month"),
                         docid_field = "sourcetweet_id")
 
-# tokenize
+
+# tokenize words
+
 RT_tokens <- quanteda::tokens(x = RT_corpus) 
 
+
 # Remove stopwords
+
 RT_tokens <- quanteda::tokens_remove(x = RT_tokens, stopwords("en"), padding = FALSE)
 
+
 # lemmatize
+
 RT_tokens <- quanteda::tokens_replace(RT_tokens, 
                                           pattern = lexicon::hash_lemmas$token, 
                                           replacement = lexicon::hash_lemmas$lemma)
 
-#limit to works over 3 characters to remove noise and meaningless words
+
+#limit to works over 3 characters to reduce noise and meaningless words
+
 RT_tokens <- tokens_select(RT_tokens, min_nchar=3L, max_nchar=79L)
 
-####create document term matrix
+                  ################### Part 3: Creating a Document Term Matrix ######################
+
+# create document term matrix from tokens
+
 dtm <- dfm(x = RT_tokens)
+
 #Document-feature matrix of: 7,119 documents, 5,498 features (99.86% sparse) and 1 docvars.
 
-#trim doc matrix according to Maier's 99% and 0.05%
-ndocs <- length(RT_corpus)
 
-# ignore overly sparse terms (appearing in less than 1% of the documents)
-minDocFreq <- ndocs * 0.005
-# ignore overly common terms (appearing in more than 80% of the documents)
-maxDocFreq <- ndocs * 0.99
+#trim doc matrix, removing words that appear in more than 99% that don't contribute to meaningful topics
+#and rare words that occur in fewers than 0.5% of the documents to reduce computationalpower needed to for 
+# the topic model
+
+ndocs <- length(RT_corpus)     # number of documents in an object    
+minDocFreq <- ndocs * 0.005    # 0.5% of documents
+maxDocFreq <- ndocs * 0.99     # 99% of documents
+
+# trim document term matrix
 
 dtm <- dfm_trim(dtm, min_termfreq = minDocFreq, max_termfreq = maxDocFreq)
 #Document-feature matrix of: 7,129 documents, 340 features (98.29% sparse) and 33 docvars.
@@ -107,13 +150,17 @@ raw_sum <- apply(dtm,1,FUN=sum) #sum by raw each raw of the table
 dtm_new <- dtm[raw_sum > 0, ] # remove empties
 #Document-feature matrix of: 6,827 documents, 354 features (98.12% sparse) and 33 docvars.
 
-# find ideal number of topics
+
+                  ######################## Part 4: Determining Number of Topics ############################
+
 # first try griffiths2004 metric
 
 edtops_griff <- FindTopicsNumber(dtm_new, topics = seq(from = 2, to = 60, by = 1), metrics = c("Griffiths2004"), method = "Gibbs", control = list(seed = 22),
                             verbose = TRUE)
 
-# plot with ggplot
+
+# plot with ggplot results with ggplot
+
 ggplot(edtops_griff, aes(topics, Griffiths2004)) +
   geom_point(color = "#66A182") +
   geom_line(color = "#66A182") +
@@ -121,16 +168,23 @@ ggplot(edtops_griff, aes(topics, Griffiths2004)) +
   theme(axis.text = element_text(size = 5)) +
   ggtitle("Griffiths 2004 Metric for Number of Topics")
 
-#find ideal K with perplexity plot 
+# according to the plot 26 topics looks ideal
+
+
+#find ideal K using perplexity measures 
 
 #make test and training set
+
 rowids <- 1:nrow(dtm_new)
 trids <- sample(x = rowids, size = 0.8*length(rowids), replace = F)
 tstids <- rowids[!rowids %in% trids]
 tr_dt<- dtm_new[trids,]
 tst_dt <- dtm_new[-trids,]
 dim(tst_dt)
+
+
 #test Ks
+
 ks <- c(3,10, 20,25, 26, 27,30,40,41,50,60,100)
 perp <- c()
 for(i in 1:length(ks)){
@@ -149,11 +203,14 @@ for(i in 1:length(ks)){
   print(perp)
 }
 
-#make df for ggplot
+
+# make df to plot in ggplot
+
 perp_plot <- data.frame(ks = ks,
                         perp = perp)
 
-# perplexity scores
+# perplexity scores plots
+
 ggplot(perp_plot, aes(x=ks, y = perp)) +
   geom_point(color= "#4682B4") +
   geom_line(color = "#4682B4") +
@@ -162,7 +219,12 @@ ggplot(perp_plot, aes(x=ks, y = perp)) +
   ylab("perplexity score") +
   xlab("number of topics")
 
-### LDA MODEL #####
+# perplexity plots also supports 26 topics 
+
+
+                  ######################## Part 5: Running the LDA Model ##############################
+
+# topic model 
 
 lda_26 <-  LDA(x = dtm_new,
                    k = 26, 
@@ -176,38 +238,67 @@ lda_26 <-  LDA(x = dtm_new,
 #Didn't effect results so left at default 0.01
 #alphas 0.05, 0.001, 0.1 were test with little effect on the results
 
-#get top 15 terms for each topic
+
+
+                  ######################## Part 6: Inspecting and Naming Topics ##########################
+
+
+# get top 15 terms for each topic
+
 print(topicmodels:: get_terms(lda_26, 15))
 
+
 #get term-topic distribution of terms
+
 lda_26_posterior <- topicmodels::posterior(object = lda_26)
+
+
 #create column for terms
+
 top_dist_over_words_26 <- lda_26_posterior$terms
-#make dataframe using datatable
+
+
+# make dataframe using datatable
+
 top_dist_over_words_dt_26 <- data.table(topic=1:26, 
                                             top_dist_over_words_26)
 
-#reshape data to columns topic, term and beta value
+
+# reshape data to columns topic, term and beta value
+
 top_dist_over_words_dt_26 <- melt.data.table(top_dist_over_words_dt_26,
                                                  id.vars = 'topic')
-#arrange in descending order
+
+
+# arrange in descending order of beta value
+
 top_dist_over_words_dt_26 <- top_dist_over_words_dt_26[order(value,decreasing = T)]
-#subset top 15
+
+
+# subset top 15 terms 
+
 top15per_topic_26 <- top_dist_over_words_dt_26 %>% 
   group_by(topic) %>% 
   slice_max(order_by = value, n = 15)
 
-#extract topic proportions from each document
+
+# extract topic proportions from each document
+
 doc_top_prop_26 <- lda_26_posterior$topic
 
-#create data table with columns sourcetweet_id to identify the tweet and its topic proportions
+
+# create data table with columns sourcetweet_id to identify the tweet and its topic proportions
+
 doc_top_prop_26 <- data.table(sourcetweet_id = lda_26@documents,
                                   doc_top_prop_26)
 
+
 #rename columns by their topic number
+
 setnames(x = doc_top_prop_26, 
          old = 2:ncol(doc_top_prop_26),
          new = paste0("Topic", 1:26))
+
 
 #plot term-topic probabilties
 
@@ -232,23 +323,33 @@ top15per_topic_26_plot %>%
   theme(plot.margin = unit(c(2,1.8,2,1.8), "cm"))
 
 
-#Topics are given names based on their terms and corresponding tweets. I used this code, going 
+# Topics are given names based on their terms and corresponding tweets. I used this code, going 
 #through each topic individually, here's topic 1 as an example:
 
 #make empty column for topic labels
+
 top15per_topic_26$label <- NA
+
+
 #get top 10 tweets with highest topic proportions
+
 t1_ids <- doc_top_prop_26[order(Topic1, decreasing = T)][,.(sourcetweet_id, Topic1)][1:10,]
 
+
 #inspect top tweets
+
 Tweet_text_df %>% filter(sourcetweet_id %in% t1_ids$sourcetweet_id) %>% select(sourcetweet_id, full_text)
 #discomfort/restriction/food/drink
 
+
 #assign topic label 
+
 top15per_topic_26 <- top15per_topic_26 %>%
   mutate(label = ifelse(topic == 1, "Discomfort/Restriction/Water", label))
 
+
 #add rest of labels
+
 top15per_topic_26 <- top15per_topic_26 %>% 
   mutate(label = case_when(topic == 1 ~ "Discomfort/Restriction/Water",
                           topic == 2 ~ "Aspiration/Clothing",
@@ -278,6 +379,7 @@ top15per_topic_26 <- top15per_topic_26 %>%
                            topic == 26 ~ "Aspiration/Body Parts"))
 
 # factor into themes
+
 top15per_topic_26_fact <- top15per_topic_26 %>%
   mutate(label = factor(label, levels = c(
     "Thoughts/Emotions",
@@ -307,69 +409,51 @@ top15per_topic_26_fact <- top15per_topic_26 %>%
     "Undefined/Mixed Topic",
     "Undefined/Mixed 2")))
 
-top15per_topic_26_fact %>% 
-  filter(label %in% head(levels(label), 13)) %>% 
-  group_by(label) %>%
-  slice_max(value, n = 15) %>% 
-  ungroup() %>%
-  arrange(label, -value) %>% 
-  mutate(variable = reorder_within(variable, value, label)) %>%
-  ggplot(aes(value, variable, fill = factor(label)))+
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ label, scales = "free_y") +
-  scale_y_reordered() + 
-  theme_minimal() +
-  xlab("beta") +
-  ylab("terms") +
-  theme(strip.text = element_text(size = 10),
-        axis.text = element_text(size = 8)) +
-  theme(plot.margin = unit(c(2,1.8,2,1.8), "cm"))
 
-top15per_topic_26_fact %>% 
-  filter(label %in% head(levels(label), 13)) %>% 
-  group_by(label) %>%
-  slice_max(value, n = 15) %>% 
-  ungroup() %>%
-  arrange(label, -value) %>% 
-  mutate(variable = reorder_within(variable, value, label)) %>%
-  ggplot(aes(value, variable, fill = factor(label)))+
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ label, scales = "free_y") +
-  scale_y_reordered() + 
-  theme_minimal() +
-  xlab("beta") +
-  ylab("terms") +
-  theme(strip.text = element_text(size = 10),
-        axis.text = element_text(size = 8)) +
-  theme(plot.margin = unit(c(2,1.8,2,1.8), "cm"))
 
-#### Mean topic proportions ######
-### Make a dataframe of topic proportions for each tweet
+                  ######################## Part 1: Pre-processing the text ##########################
+
+# Make a dataframe of topic proportions for each tweet
 
 #make vector of label names
+
 lab_vec <- top15per_topic_26 %>% distinct(label)
 
+
 #make vector sourcetweet_id and each label that will be columns in  as columns
+
 lab_vec <- c("sourcetweet_id", lab_vec$label)
 
+
 # change column names to topic names
+
 colnames(doc_top_prop_26) <- lab_vec
 
+
 #calculate topic means
+
 topic_means <- colMeans(doc_top_prop_26[, c(2:26)])
-#descending order
+
+
+# arrange in descending order
+
 topic_means <- topic_means[order(topic_means, decreasing = T)]
+
 #put into a table
+
 topic_means_dt <- data.table(topic = names(topic_means),
                              mean = topic_means)
 
+
 #plot means for source tweets
+
 ggplot(topic_means_dt, aes(x = mean, y = reorder(topic,mean))) +
   geom_point(size =3, color = "#C2b280") +
   ylab("topics") + 
   theme(plot.margin = unit(c(2,1,2,1), "cm"))
 
-#expand proportions to whole Retweet dataframe
+#expand proportions to whole retweet dataframe
+
 Full_RT_Topics_df <- left_join(month_RT_tm, doc_top_prop_26, by = "sourcetweet_id")
 RT_doc_top_prop <- Full_RT_Topics_df[,36:61]
 RT_doc_top_prop <- RT_doc_top_prop %>% drop_na()
@@ -378,23 +462,31 @@ topic_means_RT <- topic_means[order(topic_means_RT, decreasing = T)]
 topic_means_dt_RT <- data.table(topic = names(topic_means_RT),
                              mean = topic_means_RT)
 
-#plot
+# plot mean topic proportions
+
 ggplot(topic_means_dt, aes(x = mean, y = reorder(topic,mean))) +
   geom_point(size =3, color = "#8d6b94") + 
   ylab("topics")+
   theme(plot.margin = unit(c(2,1,2,1), "cm"))
 
+
 month_props <- Full_RT_Topics_df %>% select(35:61) %>% drop_na()
 
+
 #### Measure Topic Proportions by month ####
+
 # aggregate by months
+
 topic_proportion_per_month <- aggregate(month_props[,-1], by = list(month = month_props$month), mean)
 
+
 #reshape
+
 month_props_plot_df <- melt(topic_proportion_per_month, id.vars = "month")
 
 
 #colors for better identification
+
 my_colors <- c(
   "#C2b280", "#d9d9ce",
            "#5b3256","violetred4", "orchid3","#8d6b94","#D8BFD8",
@@ -407,7 +499,8 @@ my_colors <- c(
            "slategray", "grey80")
            
 
-#factor so colors are in the right order
+# factor so colors are in the right order
+
            month_props_plot_df <- month_props_plot_df %>% 
              mutate(variable = factor(variable, c("Thoughts/Emotions",
                                                   "Sweetspo/Goals",
@@ -437,6 +530,7 @@ my_colors <- c(
                                                   "Undefined/Mixed 2")))
 
 #plot
+
  ggplot(month_props_plot_df, aes(x=month, y=value, fill=variable)) + 
              geom_bar(stat = "identity") + ylab("proportion") + 
              scale_fill_manual(values = my_colors, name = "topics") + 
@@ -446,38 +540,50 @@ my_colors <- c(
                    legend.key.width = unit(.5, 'cm'), #change legend key width
                    legend.title = element_text(size=8), #change legend title font size
                    legend.text = element_text(size=5)) 
- 
+
+
  ## Top 50 proportions 
  
- #subset top 50
  #load top degree user list
+
  load("top_50_users.Rdata")
- #these are top 20
+
  
  #break full RT df with topic proportions into month dfs
  months_tm_list <- Full_RT_Topics_df %>% as.data.frame() %>% 
    group_split(month) 
  
  #subset top 50 in rt_username
+
  top_50_tm_full_df_list <- list()
  for(i in seq_along(months_tm_list)){
    top_50_tm_full_df_list[[i]] <- months_tm_list[[i]] %>% 
      filter(rt_username %in% top_50_users[[i]]$name)
  }
- 
+
+
  #bind list of dataframes into one dataframe 
+
  top_50_tm_full_df <- do.call(rbind, top_50_tm_full_df_list)
 
+
  #select month and topics columns
+
  month_props_50 <- top_50_tm_full_df %>% select(35:61) %>% drop_na()
- 
+
+
  #aggregate by month
+
  topic_proportion_per_month_50 <- aggregate(month_props_50[,-1], by = list(month = month_props_50$month), mean)
- 
+
+
  #reshape
+
  month_props_plot_df_50 <- melt(topic_proportion_per_month_50, id.vars = "month")
 
+
  #factor again for this df so colors are right
+
   month_props_plot_df_50 <- month_props_plot_df_50 %>% 
    mutate(variable = factor(variable, c("Thoughts/Emotions",
                                         "Sweetspo/Goals",
@@ -507,6 +613,7 @@ my_colors <- c(
                                         "Undefined/Mixed 2")))
  
  #plot
+
  ggplot(month_props_plot_df_50, aes(x=month, y=value, fill=variable)) + 
    geom_bar(stat = "identity") + ylab("proportion") +
    scale_fill_manual(values = my_colors, name = "topics") + 
@@ -516,7 +623,8 @@ my_colors <- c(
          legend.key.width = unit(.5, 'cm'), #change legend key width
          legend.title = element_text(size=8), #change legend title font size
          legend.text = element_text(size=5)) 
- 
+
+
 ### Raw tweet count for selected topics 
  
  #create threshold for proportion above which it is counted as being mostly about
