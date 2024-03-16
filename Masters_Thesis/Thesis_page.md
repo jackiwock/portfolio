@@ -6,13 +6,13 @@
 
 <table>
   <tr>
-    <td><a href="https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis/Code">Code</a></td>
     <td><a href="http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-199924">Thesis Paper</a></td>
+    <td><a href="https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis/Code">Code</a></td>
   </tr>
 </table>
 
 
-## Abstract
+### Abstract
 
 The Covid-19 pandemic presented unprecedented challenges, with global
 lockdowns impacting individuals on a profound scale. Many took to social
