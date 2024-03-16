@@ -1,6 +1,3 @@
----
-title: Jacquelynn Ennis
----
 
 # About Me
 
