@@ -1,6 +1,4 @@
-[About Me](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis)
-[Contact] (https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis)
-[CV](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis)
+
 
 <p style="text-align: center;">About Me</p>
 
