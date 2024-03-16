@@ -295,7 +295,4 @@ final_ana <- clean_tweets %>%
 # Original count 73,896. Now 71,001
 
                            
-# make a new column with year and month 
-                           
-final_ana <- final_ana %>% mutate(month = format(Date, "%Y-%m"))
 
