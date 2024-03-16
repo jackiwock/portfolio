@@ -4,7 +4,12 @@
 
 ## Measuring Covid-19’s Impact on Leadership in Pro-Eating Disorder Twitter Communities
 
-| [Code](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis/Code) | [Thesis Paper](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-199924) |
+<table>
+  <tr>
+    <td><a href="https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis/Code">Code</a></td>
+    <td><a href="http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-199924">Thesis Paper</a></td>
+  </tr>
+</table>
 
 
 ## Abstract
