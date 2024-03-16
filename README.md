@@ -4,7 +4,7 @@ I am a recent graduate with a master's in Computational Social Science and I am 
 
 |   |   |
 |---|---|
-| [<img src="Screenshot 2024-03-16 at 11.39.33.png">](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis) | [<img src="Screenshot 2024-03-16 at 11.45.56.png">](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis) |
+| [<img src="projects_button.png">](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis) | [<img src="thesis_button.png">](https://github.com/jackiwock/portfolio/tree/main/Masters_Thesis) |
 
 
 
