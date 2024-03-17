@@ -1,8 +1,5 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>Influencers In Confinement</title>
 </head>
 <body>
   <div align="center">
