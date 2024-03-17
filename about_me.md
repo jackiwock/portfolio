@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Jacquelynn Ennis
-permalink: portfolio/about_me
+permalink: /about_me
 ---
 
 <h1>About Me</h1>
