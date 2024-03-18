@@ -6,6 +6,7 @@
   <img src="thesis_button.png" alt="Button">
 </a>
 
+[<img src="https://github.com/jackiwock/portfolio/thesis_button.png" width="30"/>](https://github.com/)
 
 
 
