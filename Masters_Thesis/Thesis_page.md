@@ -1,5 +1,5 @@
 ---
-title: Jacquelynn Ennis
+layout: default
 ---
 
 <html>
