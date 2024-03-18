@@ -11,5 +11,5 @@
 </table>
 
 
-[![FLipkart](thesis_button.png)](thesis_write_up)
+[![FLipkart](thesis_button.png)](thesis_write_up.md)
 
