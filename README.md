@@ -1,5 +1,5 @@
 <div style="text-align: center;">
-  <a href="about_me.md" style="display: inline-block; padding: 10px 20px; margin-right: 10px; background-color: lightgray; border: 2px solid turquoise; color: black; text-decoration: none;">About Me</a>
+  <a href="about_me.md" style="display: inline-block; padding: 10px 20px; margin-right: 100px; background-color: lightgray; border: 2px solid turquoise; color: black; text-decoration: none;">About Me</a>
   <a href="JEnnis_CV.pdf" style="display: inline-block; padding: 10px 20px; background-color: lightgray; border: 2px solid turquoise; color: black; text-decoration: none;">CV</a>
 </div>
 
