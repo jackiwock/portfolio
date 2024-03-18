@@ -3,7 +3,6 @@ layout: default
 ---
 
 <html>
-</head>
 <body>
   <div align="center">
     <h1 style="text-align: center;">Influencers In Confinement</h1>
