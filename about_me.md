@@ -1,7 +1,5 @@
 ---
-layout: page
-title: Jacquelynn Ennis
-permalink: /about_me
+layout: default
 ---
 
 <h1>About Me</h1>
