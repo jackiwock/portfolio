@@ -1,5 +1,5 @@
 
- [<img src="about_me.png" width="30"/>](about_me.md)
+ [<img src="about_me.png" width="100"/>](about_me.md)
   <a href="JEnnis_CV.pdf" style="display: inline-block; padding: 10px 20px; background-color: lightgray; border: 2px solid turquoise; color: black; text-decoration: none;">CV</a>
 
 
