@@ -1,5 +1,5 @@
 <div style="text-align: center;">
-  <a href="https://github.com/jackiwock/portfolio/edit/main/about_me.md" style="display: inline-block; padding: 10px 20px; margin-right: 50px; background-color: lightgray; border: 2px solid turquoise; color: black; text-decoration: none;">About Me</a>
+ [<img src="about_me.png" width="30"/>](about_me.md)
   <a href="JEnnis_CV.pdf" style="display: inline-block; padding: 10px 20px; background-color: lightgray; border: 2px solid turquoise; color: black; text-decoration: none;">CV</a>
 </div>
 
