@@ -1,8 +1,8 @@
-<center>
+
 
 [<img src="about_me.png" width="150"/>](about_me.md)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<img src="cv.png" width="80"/>](JEnnis_CV.pdf)
 
-</center>
+
 
 <p style="text-align: center;">
   email: <a href="mailto:jacquelynnennis@yahoo.com">jacquelynnennis@yahoo.com</a> | phone: <a href="tel:+13472772539">+1 347 277-2539</a>
